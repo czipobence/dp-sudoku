@@ -60,3 +60,7 @@ hanyadosinf(T) ->
 	catch
 		error:badarith -> inf
 	end.
+	
+%lustalista
+infseq(N,D) ->
+	[N | fun() -> infseq(N+D,D) end].
