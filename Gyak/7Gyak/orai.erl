@@ -53,3 +53,10 @@ hanyados({tort, _, 0}) ->
 hanyados({tort, Sz, N}) when is_integer(Sz), is_integer(N) ->
 	Sz/N;
 hanyados({tort,_,_}) -> error(function_clause).
+
+hanyadosinf(T) ->
+	try hanyados(T) of
+		V -> V
+	catch
+		error:badarith -> inf
+	end.
