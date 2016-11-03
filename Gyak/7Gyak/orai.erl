@@ -30,3 +30,7 @@ rendezett_fa({N,L,R}) ->
 	{ok, JE} = fa_jobberteke(L),
 	(JE < N) andalso (BE > N) andalso 
 	rendezett_fa(L) andalso rendezett_fa(R).
+	
+tartalmaz(_,level) -> false;
+tartalmaz(Mit,{Mit,_,_}) -> true;
+tartalmaz(Mit,{_,L,R}) -> tartalmaz(Mit,L) or tartalmaz(Mit,R).
