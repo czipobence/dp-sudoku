@@ -43,3 +43,13 @@ utak(F) -> utak(F, []).
 
 utak(level, _) -> [];
 utak({N,L,R}, E) -> [{N, lists:reverse(E)} | utak(L, [N | E] )] ++ utak(R,[N|E]). 
+
+cutak(X,F) -> [ {E,L} || {E,L} <- utak(F), E == X ]. 
+
+%TODO 8b, 9
+
+hanyados({tort, _, 0}) ->
+	error(badarith);
+hanyados({tort, Sz, N}) when is_integer(Sz), is_integer(N) ->
+	Sz/N;
+hanyados({tort,_,_}) -> error(function_clause).
