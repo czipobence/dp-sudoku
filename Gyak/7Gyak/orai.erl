@@ -34,3 +34,7 @@ rendezett_fa({N,L,R}) ->
 tartalmaz(_,level) -> false;
 tartalmaz(Mit,{Mit,_,_}) -> true;
 tartalmaz(Mit,{_,L,R}) -> tartalmaz(Mit,L) or tartalmaz(Mit,R).
+
+elofordul(_,level) -> 0;
+elofordul(Mi,{Mi,L,R}) -> elofordul(Mi,L) + elofordul(Mi,R) + 1;
+elofordul(Mi,{_,L,R}) -> elofordul(Mi,L) + elofordul(Mi,R).
