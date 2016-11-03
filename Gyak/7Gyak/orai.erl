@@ -68,3 +68,14 @@ infseq(N,D) ->
 nth(1,[H|_]) -> H;
 nth(N,[_|T]) ->
 	nth(N-1,T()).
+	
+%lustamap
+map(_, []) -> [];
+map(F, [H|T]) -> [F(H)|fun() -> map(F, T()) end].
+
+%bevezeto fac
+fac(0) -> 1;
+fac(N) -> N * fac(N-1).
+
+invfacs() ->
+	map(fun(X) -> 1 / fac(X) end, infseq(0,1)).
