@@ -1,75 +1,62 @@
-% :- pred megoldase(sspec::in, ssol::in).
-% megoldase(+SSpec,+SSol) : sikeres, ha az SSol érték-mátrix megoldása az SSpec Sudoku-feladványnak.
-megoldase(s(K,Mx),Sol) :-
-	valid(K,Sol),
-	fitting(K,Mx,Sol).
+% :- type sspec ---> s(size, board).
+% :- type size  == int.
+% :- type field == list(info).
+% :- type info ---> e; o; s; w; v(int).
+% :- type board == list(list(field)).
 
-% fitting(K,Mx,Sol) : sikeres ha Sol nem mond ellent a mezoinfoknak
-fitting(K,Mx,Sol) :-
-	N is K*K,
-	myforall(
-		(bet(1,N,Col),bet(1,N,Row)), 
-		(mx_item(Mx,Row,Col,Infos),	infosHold(Infos,Sol,Row,Col))
-	).
+% :- type ssol == list(list(int)).
 
-% infosHold(L,Sol,Row,Col) : sikres, ha Sol Row. soranak Col. eleme kielegiti L infolista minden elemet.
-infosHold([H|T],Sol,Row,Col) :-
-	infoHolds(H,Sol,Row,Col),
-	infosHold(T,Sol,Row,Col).
+% sudoku(SSpec, SSol):
+% SSol az SSpec feladványt kielégítő megoldás.
+% :- pred sudoku(sspec::in, ssol::out).
+sudoku(s(K,Bo),Sol) :- sudoku(K,Bo,1,Sol).
 
-infosHold([],_,_,_).
+sudoku(K,_,R,[]) :- R is K*K + 1.
+sudoku(K,Bo,R,[H|T]) :-
+	R < K * K + 1,
+	sudoku_row(K,Bo,R,1,H),
+	R1 is R + 1,
+	sudoku(K,Bo,R1,T).
 
-% infosHold(I,Sol,Row,Col) : sikres, ha Sol Row. soranak Col. eleme kielegiti I infot.
-infoHolds(v(V),Sol,Row,Col) :-
-	mx_item(Sol,Row,Col,V).
-infoHolds(e,Sol,Row,Col) :-
-	mx_item(Sol,Row,Col,V),
-	0 is V mod 2.
-infoHolds(o,Sol,Row,Col) :-
-	mx_item(Sol,Row,Col,V),
-	1 is V mod 2.
-infoHolds(w,Sol,Row,Col) :-
-	mx_item(Sol,Row,Col,V1),
-	Col1 is Col - 1,
-	mx_item(Sol,Row,Col1,V2),
-	Sum is V1 + V2,
-	1 is Sum mod 2.
-infoHolds(s,Sol,Row,Col) :-
-	mx_item(Sol,Row,Col,V1),
-	Row1 is Row + 1,
-	mx_item(Sol,Row1,Col,V2),
-	Sum is V1 + V2,
-	1 is Sum mod 2.
+sudoku_row(K,_,_,C,[]) :- C is K * K +1.
+sudoku_row(K,Bo,R,C,[H|T]) :-
+	C < K * K +1,
+	ertekek(s(K,Bo),R-C,H),
+	C1 is C + 1,
+	sudoku_row(K,Bo,R,C1,T).
 
-% valid(K,Sol) sikeres, ha Sol egy valid K parameteru sudoku kitoltes
-valid(K,Sol) :- 
-	valid_ll(K,Sol),
-	N is K * K,
-	feldarabolasa(Sol,N-1,ColL),
-	valid_ll(K,ColL),
-	feldarabolasa(Sol,K-K,SqL),
-	valid_ll(K,SqL).
 
-% valid_ll(K,LL) sikeres, ha LL minden eleme 1 tol K*K ig tartalmazza a szamok
-% egy permutaciojat
-valid_ll(K,[H|T]) :-
-	valid_ll(K,T),
-	N is K * K,	
-	valid_list(N,H).
-valid_ll(_,[]).
-	
+% :- type col  == int.
+% :- type row  == int.
+% :- type coords -->row-col.
+% :- pred ertekek(sspec::in, coords::in, list(int)::out).
+% ertekek(SSpec, R_C, Vals): 
+% Egy érték pontosan akkor szerepel a Vals listában, ha:
+%    (a) 1..k*k közötti egész, ahol k az SSpec feladvány cellamérete,
+%    (b) teljesíti az adott mezőre vonatkozó szám- és paritási infók
+%        által előírt megszorításokat, továbbá
+%    (c) különbözik az adott mezőt tartalmazó sor, oszlop és cella többi
+%        mezőjében szereplő száminfóktól, 
+% ahol
+%    SSpec az sspec típusspecifikációnak megfelelő Sudoku-feladvány,
+%    R_C az adott feladvány egy mezőjének (sor-oszlop formában megadott) koordinátája,
+%    Vals list(int) típusú mezőértéklista, az SSpec feladvány R_C koordinátájú
+%         mezőjében megengedett értékek listája. 
+ertekek(s(K,Mx), R-C, Vals) :-
+	findall(N, ertekek(Mx,R,C,K,N), Vals).
 
-% valid_list(K,L) sikeres, ha L minden elemei a 1 tol K*K ig a szamok
-% egy permutacioja
-valid_list(N,L) :-
-	length(L,N),
-	myforall(bet(1,N,X), member(X,L)).
-
-% myforall(A,B) sikeres, ha minden A ra B is igaz
-myforall(A, B) :-
-    \+ (call(A), \+ call(B)).	
-	
-%------------------------------   KHF2 ------------------------------
+% ertekek (Mx,R,C,K,N)
+% egy olyan szam, ami Mx K parameteru sudokuban allhat R,C helyen
+ertekek(Mx,R,C,K,N) :-
+	mx_item(Mx,R,C,Info),
+	remove_mx_element(Mx,R,C,M1),
+	list_nth(M1,R,Sor),
+	findall(Temp,in_col(M1,C,Temp),Oszlop),
+	negyzet(M1,R,C,K,Sq),
+	limited_to(Info,K,N),
+	allowed_by(Sor,K,N),
+	allowed_by(Oszlop,K,N),
+	allowed_by(Sq,K,N).
 
 %mx_item(Mx,R,C,Val)
 %Val Mx matrix R sorának C oszlopában talalhato eleme
@@ -85,6 +72,73 @@ list_nth([_|T],N,Val):-
 	N1 is N-1,
 	list_nth(T,N1,Val).
 
+%in_col(Mx,N,Item)
+%Item megtalalhato Mx matrix N. oszlopaban (1tol kezdve)
+in_col([H|T],N,Item) :-
+	list_nth(H,N,Item);
+	in_col(T,N,Item).
+
+%negyzet(Mx,R,C,K,Sq)
+%Sq Mx, K parameteru sudoku R. soraban es C. oszlopaban talalhato elemet bennfoglalo negyzet
+negyzet(Mx,R,C,K,Sq) :-
+	SR is R - ((R - 1) mod K),
+	SC is C - ((C - 1) mod K),
+	submatrix(Mx,SR,SC,K,K,Sq).
+
+%remove_mx_element(Mx,R,C,M1)
+%M1 Mx matrix, aminek R. soranak C. oszlopaban levo elemet []-re csereltek
+remove_mx_element([H|T1],R,C,[H|T2]) :-
+	R > 1,
+	R1 is R-1,
+	remove_mx_element(T1,R1,C,T2).
+remove_mx_element([H1|T],1,C,[H2|T]):-
+	remove_list_element(H1,C,H2).
+
+%remove_list_element(L,N,L1)
+%L1 L lista N. elemenek []-re cserelesevel kapott lista
+remove_list_element([H|T1],C,[H|T2]):-
+	C > 1,
+	C1 is C-1,
+	remove_list_element(T1,C1,T2).
+remove_list_element([_|T],1,[[]|T]).
+
+%limited_to(V,K,N)
+% N olyan szám, amely V info mellett egy K parameteru sudoku adott mezojeben lehet
+limited_to([H|T],K,N) :-
+	limited_to(H,K,N),
+	limited_to(T,K,N).
+limited_to(v(V),K,V) :- 
+	V < K*K+1.
+limited_to(V,K,N) :-
+	Top is K*K,
+	bet(1,Top,N),
+	( V = o -> odd(N)
+	; V = e -> even(N)
+	; (V = s; V = w; V = [])
+	).
+
+%allowed_by(V,K,N)
+%N olyan szam ami egy K parameteru sudokuban V infoval azonos szegmensben
+%azaz sorban, oszlopban vagy negyzetben, elofordulhat.
+allowed_by([H|T],K,N) :-
+	allowed_by(H,K,N),
+	allowed_by(T,K,N).
+allowed_by(V,K,N) :-
+	Top is K*K,
+	bet(1,Top,N),
+	( V = v(Val) -> N \= Val;
+	 (V = s; V=e; V=w; V=o; V=[])
+	).
+
+%even(N)
+%N paros szam
+even(N):-
+	0 is N mod 2.
+%odd(N)
+%N paratlan szam
+odd(N):-
+	1 is N mod 2.
+
 %bet(From,To,N)
 %N From es To kozotti szam
 bet(From,To,N) :-
@@ -94,54 +148,12 @@ bet(From,To,N) :-
 	From1 is From + 1,
 	bet(From1,To,N).
 
-%------------------------------  /KHF2 ------------------------------
-%------------------------------   KHF1 ------------------------------
 
-% :- type matrix == list(row).
-% :- type row == list(any).
-% :- type parameter ---> subRows-subCols.
-% :- type subRows == int.
-% :- type subCols == int.
-% :- pred feldarabolasa(+matrix, +parameter, ?list(list(any))).
-% feldarabolasa(Mx, P, LL): Az LL lista az Mx mátrix P paraméterű feldarabolása.
-feldarabolasa(Mx, R-C, LL) :- 
-	feldarabolasa(Mx,R,C,LLt),
-	flattenNextLvl(LLt,LL).
-
-
-% feldarabolasa(Mx, R,C, LL): Az LL lista az Mx mátrix R-C paraméterű mátrixokra darabolása
-feldarabolasa(Mx, R, C, LL):- 
-	countR(Mx, R, Cr, 0),
-	countC(Mx, C, Cc, 0),
-	split(Mx, R, C, Cr, Cc, LL).
-
-
-% split(Mx, R,C, Cr, Cc, LL): Az LL lista az Mx mátrix R-C paraméterű mátrixokra darabolása,
-% sorok mentén legfeljebb Cr, oszolopok mentén legfeljebb Cc részre vágva
-split([Hmx|Tmx], R,  C, Cr, Cc, LL) :-
-	split([Hmx|Tmx], R, C, Cr, Cc, 0, 0, LL).
-
-% split(Mx, R,C, Cr, Cc, Cntr, Cntc LL): Az LL lista az Mx mátrix R-C paraméterű mátrixokra darabolása,
-% sorok mentén legfeljebb Cr, oszolopok mentén legfeljebb Cc részre vágva
-% a sorok szerint Cntr, az oszlopok szerint Cntc-dik részmátrixtól kezdve
-split(_, _, _, Cr, _, Cr, 0, []).
-split([H|T],R,C,Cr,Cc,Cntr,Cc,L) :-
-	Cntr1 is Cntr+1,
-	split([H|T],R,C,Cr,Cc,Cntr1,0,L).
-split([Hmx|Tmx], R,  C, Cr, Cc, Cntr, Cntc, [H1|T1]) :- 
-	Cntr < Cr,
-	Cntc < Cc,
-	Cntc1 is Cntc + 1,
-	StartC is Cntc * C + 1,
-	StartR is Cntr * R + 1,
-	submatrix([Hmx|Tmx], StartC, C, StartR, R, H1),
-	split([Hmx|Tmx], R, C, Cr, Cc, Cntr, Cntc1, T1).
-
-% submatrix(Mx, StartC, Width, StartR, Height, Smx):
+% submatrix(Mx, StartR, StartC, Height, Width, Smx):
 %% Smx mátrix az Mx mátrix olyan sor és oszlopfolytonos részmátrixa,
 %% ami a StartC oszloptól Width oszlop szélesen,
 %% és a StartR sortól Height sor hosszan tart 
-submatrix(Mx, StartC, Width, StartR, Height, Smx) :-
+submatrix(Mx, StartR, StartC, Height, Width, Smx) :-
 	sublist(Mx, StartR, Height, Lt),
 	cutAll(Lt, StartC, Width, Smx).
 
@@ -176,42 +188,6 @@ drop([_|T], N, Dropped) :-
 	N1 is N-1,
 	drop(T,N1,Dropped).
 
-% countC(Mx, C, Cc, Acc): Cc = Acc + ahány részre esik Mx mátrix C oszloponként vágva
-countC([H|_], C, Cc, 0) :- 
-	isList(H),
-    countR(H,C,Cc,0).
-
-%countR(Mx, R, Cr, Acc): Cr = Acc + ahány részre esik Mx mátrix R soronként vágva
-countR([], _, 0, _).
-countR([H|T], R, Cr, 0) :- 
-	countR([H|T],R,UjCr,R),
-	Cr is UjCr + 1.
-countR([_|T], R, Cr, Rem) :-
-	Rem > 0,
-	UjRem is Rem -1,
-	countR(T, R, Cr, UjRem).
-
-% flattenNextLvl(L,Fl): Fl az L lista elemeit taralmazza, mindet kilapítva
-flattenNextLvl([],[]).
-flattenNextLvl([H0|T0],[H1|T1]):-
-	flatten(H0,H1),
-	flattenNextLvl(T0,T1).
-	
-
-% flatten(L,Fl) : Fl L lista kilapítva
-flatten(L, Fl):-
-  flatten(L, Fl, []).
-
-% flatten(L, Fl, Acc) Fl az L lista kilapítva és Acc elé fűzve
-flatten([], Fl, Fl).
-flatten(H, [H|Fl], Fl):-
-  \+ isList(H).
-flatten([H|T], Fl, Acc):-
-  flatten(H, Fl, L1),
-  flatten(T, L1, Acc).
-
 % isList(L) L egy tetszőleges lista (annak eldöntésére, hogy L lista-e)
 isList([]).
 isList([_|_]).
-
-%------------------------------  /KHF1 ------------------------------
