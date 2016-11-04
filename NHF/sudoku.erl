@@ -24,7 +24,11 @@ sudoku({K,Bo}) ->
 solve(K,Bo) ->
 	BoPP = preprocess(Bo),
 	Vals = allowed(K,BoPP),
-	process_singles(K,Vals,BoPP).
+	Temp = process_singles(K,Vals,BoPP),
+	case shortest_list(Temp) of
+		0 -> [Temp];
+		_ -> "TODO - more possible solution" 
+	end.
 	
 process_singles(K,Vals,BoPP) ->
 	try process_one_single(Vals, BoPP,1) of 
@@ -241,6 +245,27 @@ set_nth_proc_element(E,_,_,_,_,_) -> E.
 %% és a StartY sortól Height sor hosszan tart 									
 submatrix(Mx, StartX, StartY, Width, Height) ->
 	[lists:sublist(L, StartY, Height) || L <- lists:sublist(Mx, StartX, Width)].
+	
+shortest_list(Mx) -> shortest_list(Mx,0).
+
+shortest_list([], Cnt) -> Cnt;
+shortest_list([H|T],Cnt) -> 
+	shortest_list(T, shortest_list_row(H,Cnt)).
+	
+shortest_list_row([],Cnt) -> Cnt;
+shortest_list_row([H|T], Cnt) ->
+	case H of
+		[] ->
+			throw(no_solution);
+		[_|_] ->
+			if
+				((length(H) < Cnt) or (Cnt == 0)) -> 
+					shortest_list_row(T,length(H));
+				true ->
+					shortest_list_row(T,Cnt)
+			end;
+		_ -> shortest_list_row(T,Cnt)
+	end.
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Listakezeles
