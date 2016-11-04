@@ -22,9 +22,36 @@ sudoku({K,Bo}) ->
 	end.
 
 solve(K,Bo) ->
-	BoPP = preprocess(K,Bo),
+	BoPP = preprocess(Bo),
 	Vals = allowed(K,BoPP),
-	apply_sw(K,Vals,BoPP).
+	Temp = apply_sw(K,Vals,BoPP),
+	%Temp.
+	BoPP.
+	%setValue(K,Temp,3,2,3).
+
+setValue(K,Vals,R,C,V) ->
+	lists:reverse(setValue(K,Vals,R,C,V,1,[])).
+	
+setValue(_,[],_,_,_,_,Acc) -> Acc;
+setValue(K,[H|T],R,C,V,Rc,Acc) ->
+	setValue(K,T,R,C,V,Rc+1, [lists:reverse(setValue_row(K,H,R,C,V,Rc,1,[]))|Acc]).
+	
+setValue_row(_,[],_,_,_,_,_,Acc) -> Acc;
+setValue_row(K,[_|T],R,C,V,R,C,Acc) -> 
+	setValue_row(K,T,R,C,V,R,C+1,[V|Acc]);
+setValue_row(K,[H|T],R,C,V,R,Cc,Acc) -> 
+	setValue_row(K,T,R,C,V,R,Cc+1,[delete_guess(V,H)|Acc]);
+setValue_row(K,[H|T],R,C,V,Rc,C,Acc) -> 
+	setValue_row(K,T,R,C,V,Rc,C+1,[delete_guess(V,H)|Acc]);
+setValue_row(K,[H|T],R,C,V,Rc,Cc,Acc) when (((R - (R-1) rem K) == (Rc - (Rc - 1) rem K)) andalso ((C - (C-1) rem K) == (Cc -(Cc-1) rem K))) -> 
+	setValue_row(K,T,R,C,V,Rc,Cc+1,[delete_guess(V,H)|Acc]);
+setValue_row(K,[H|T],R,C,V,Rc,Cc,Acc) -> 
+	setValue_row(K,T,R,C,V,Rc,Cc+1,[H|Acc]).
+
+delete_guess(V, [V]) -> throw(no_solution);
+delete_guess(V, [H|T]) -> lists:delete(V,[H|T]);
+delete_guess(V, V) -> throw(no_solution);
+delete_guess(_,N) -> N.
 
 apply_sw(K,Vals,Bo) -> 
 	[[ apply_sw(K,Vals,Bo,R,C) 
@@ -122,8 +149,35 @@ verify_to_sw_infos(K,Vals,Bo,R,C,PV,[_|T]) ->
 
 
 %% @spec sudoku:preprocess(K::integer(), M::board()) -> M1::board()
-%%	 M1 egy tabla, ami feldolgozza az infokat
-preprocess(_,Bo) -> Bo. %TODO
+%% M1 egy tabla, ami a feldolgozott infokat tartaknazza, kiegeszitve 
+%% azokat north (n) es east (a) informaciokkal
+preprocess(Bo) -> lists:reverse(preprocess([],Bo,[])).
+
+preprocess(_,[],Acc) -> Acc;
+preprocess(PrevR,[CurrR|T], Acc) ->
+	preprocess(CurrR,T,[lists:reverse(preprocess_row(PrevR,CurrR,[])) | Acc]).
+	
+preprocess_row(_,[],Acc) -> Acc;
+preprocess_row([], [CurrI], Acc) -> [CurrI | Acc];
+preprocess_row([], [CurrI,NextI|CurrT], Acc) -> 
+	GuardW = lists:member(w,NextI),
+	if 	GuardW 	-> preprocess_row([], [NextI | CurrT], [ [a | CurrI] | Acc ]);
+		true 	-> preprocess_row([], [NextI | CurrT], [CurrI | Acc])
+	end;
+preprocess_row([PreI], [CurrI], Acc) -> 
+	Guard = lists:member(s,PreI),
+	if 	Guard -> [[n | CurrI]| Acc];
+		true -> [CurrI | Acc]
+	end;
+preprocess_row([PreI|PreT], [CurrI,NextI|CurrT], Acc) ->
+	GuardS = lists:member(s,PreI),
+	GuardW = lists:member(w,NextI),
+	CurrI1 = if	GuardS -> [n | CurrI];
+		true -> CurrI
+	end,
+	if GuardW -> preprocess_row(PreT, [NextI|CurrT], [ [a | CurrI1] | Acc ]);
+		true -> preprocess_row(PreT, [NextI|CurrT], [CurrI1 | Acc])
+	end.
 
 %% @spec sudoku:allowed(K::integer(), M::board()) -> Vals::[[[integer()]]]
 %%	 Vals a Bo infoi altal megengedett mezoertekek matrixa
