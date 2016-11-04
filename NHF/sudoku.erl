@@ -29,12 +29,12 @@ solve(K,Bo) ->
 		{0,0,0,_} -> [Temp];
 		{_,R,C,V} -> 
 			Inf = nth_matr(BoPP,R,C),
-			split_by(K,Temp,R,C,V,Inf) 
+			split_by(K,Temp,R,C,V,Inf,[]) 
 	end.
 	
-split_by(_,_,_,_,[],_) -> [];
-split_by(K,Vals,R,C,[H|T],Inf) ->
-	merge([setValue(K,Vals,R,C,H,Inf)], split_by(K,Vals,R,C,T,Inf)). 
+split_by(_,_,_,_,[],_,Acc) -> Acc;
+split_by(K,Vals,R,C,[H|T],Inf,Acc) ->
+	split_by(K,Vals,R,C,T,Inf, merge([setValue(K,Vals,R,C,H,Inf)],Acc)). 
 	
 process_singles(K,Vals,BoPP) ->
 	try process_one_single(Vals, BoPP,1) of 
