@@ -1,3 +1,6 @@
+evaluation/
+keretprogram/
+
 .eunit
 deps
 *.o
