@@ -24,17 +24,30 @@ sudoku({K,Bo}) ->
 solve(K,Bo) ->
 	BoPP = preprocess(Bo),
 	Vals = allowed(K,BoPP),
-	Temp = process_singles(K,Vals,BoPP),
-	case shortest_list(Temp) of
-		{0,0,0,_} -> [Temp];
-		{_,R,C,V} -> 
-			Inf = nth_matr(BoPP,R,C),
-			split_by(K,Temp,R,C,V,Inf,[]) 
+	solve(K,Vals,Bo).
+	
+solve(K, Vals,Bo) ->
+	try
+		Temp = process_singles(K,Vals,Bo),
+		case shortest_list(Temp) of
+			{0,0,0,_} -> [Temp];
+			{_,R,C,V} ->
+				Inf = nth_matr(Bo,R,C),
+				split_by(K,Temp,Bo,R,C,V,Inf,[]) 
+		end
+	of
+		Val -> Val
+	catch 
+		throw:no_solution -> []
 	end.
 	
-split_by(_,_,_,_,[],_,Acc) -> Acc;
-split_by(K,Vals,R,C,[H|T],Inf,Acc) ->
-	split_by(K,Vals,R,C,T,Inf, merge([setValue(K,Vals,R,C,H,Inf)],Acc)). 
+split_by(_,_,_,_,_,[],_,Acc) -> Acc;
+split_by(K,Vals,Bo,R,C,[H|T],Inf,Acc) ->
+	try setValue(K,Vals,R,C,H,Inf) of
+		V -> split_by(K,Vals,Bo,R,C,T,Inf, merge(solve(K,V,Bo),Acc))
+	catch
+		throw:no_solution -> split_by(K,Vals,Bo,R,C,T,Inf, Acc)
+	end. 
 	
 process_singles(K,Vals,BoPP) ->
 	try process_one_single(Vals, BoPP,1) of 
@@ -154,11 +167,15 @@ preprocess_row([PreI], [CurrI], Acc) ->
 preprocess_row([PreI|PreT], [CurrI,NextI|CurrT], Acc) ->
 	GuardS = lists:member(s,PreI),
 	GuardW = lists:member(w,NextI),
-	CurrI1 = if	GuardS -> [n | CurrI];
+	CurrI1 = if	
+		GuardS -> [n | CurrI];
 		true -> CurrI
 	end,
-	if GuardW -> preprocess_row(PreT, [NextI|CurrT], [ [a | CurrI1] | Acc ]);
-		true -> preprocess_row(PreT, [NextI|CurrT], [CurrI1 | Acc])
+	if 
+		GuardW ->
+			preprocess_row(PreT, [NextI|CurrT], [ [a | CurrI1] | Acc ]);
+		true -> 
+			preprocess_row(PreT, [NextI|CurrT], [CurrI1 | Acc])
 	end.
 
 %% @spec sudoku:allowed(K::integer(), M::board()) -> Vals::[[[integer()]]]
