@@ -26,28 +26,80 @@ solve(K,Bo) ->
 	Vals = allowed(K,BoPP),
 	Temp = apply_sw(K,Vals,BoPP),
 	%Temp.
-	BoPP.
-	%setValue(K,Temp,3,2,3).
+	%BoPP.
+	setValue(K,Temp,3,2,3,[a,s,w,n]).
 
-setValue(K,Vals,R,C,V) ->
-	lists:reverse(setValue(K,Vals,R,C,V,1,[])).
+setValue(K,Vals,R,C,V,I) ->
+	lists:reverse(setValue(K,Vals,R,C,V,I,1,[])).
 	
-setValue(_,[],_,_,_,_,Acc) -> Acc;
-setValue(K,[H|T],R,C,V,Rc,Acc) ->
-	setValue(K,T,R,C,V,Rc+1, [lists:reverse(setValue_row(K,H,R,C,V,Rc,1,[]))|Acc]).
+setValue(_,[],_,_,_,_,_,Acc) -> Acc;
+setValue(K,[H|T],R,C,V,I,Rc,Acc) ->
+	setValue(K,T,R,C,V,I,Rc+1, [lists:reverse(setValue_row(K,H,R,C,V,I,Rc,1,[]))|Acc]).
 	
-setValue_row(_,[],_,_,_,_,_,Acc) -> Acc;
-setValue_row(K,[_|T],R,C,V,R,C,Acc) -> 
-	setValue_row(K,T,R,C,V,R,C+1,[V|Acc]);
-setValue_row(K,[H|T],R,C,V,R,Cc,Acc) -> 
-	setValue_row(K,T,R,C,V,R,Cc+1,[delete_guess(V,H)|Acc]);
-setValue_row(K,[H|T],R,C,V,Rc,C,Acc) -> 
-	setValue_row(K,T,R,C,V,Rc,C+1,[delete_guess(V,H)|Acc]);
-setValue_row(K,[H|T],R,C,V,Rc,Cc,Acc) when (((R - (R-1) rem K) == (Rc - (Rc - 1) rem K)) andalso ((C - (C-1) rem K) == (Cc -(Cc-1) rem K))) -> 
-	setValue_row(K,T,R,C,V,Rc,Cc+1,[delete_guess(V,H)|Acc]);
-setValue_row(K,[H|T],R,C,V,Rc,Cc,Acc) -> 
-	setValue_row(K,T,R,C,V,Rc,Cc+1,[H|Acc]).
+setValue_row(_,[],_,_,_,_,_,_,Acc) -> Acc;
+setValue_row(K,[_|T],R,C,V,I,R,C,Acc) -> 
+	setValue_row(K,T,R,C,V,I,R,C+1,[V|Acc]);
 
+setValue_row(K,[H|T],R,C,V,I,Rc,C,Acc) when Rc == R-1 ->
+	GuardS = lists:member(n,I),
+	H1 = if 
+		GuardS -> 
+			if 
+				V rem 2 == 0	-> filter_odds(H);
+				true 			-> filter_evens(H)
+			end;
+		true -> H
+	end,
+	setValue_row(K,T,R,C,V,I,Rc,C+1,[delete_guess(V,H1)|Acc]);
+	
+setValue_row(K,[H|T],R,C,V,I,Rc,C,Acc) when Rc == R+1 ->
+	GuardS = lists:member(s,I),
+	H1 = if 
+		GuardS -> 
+			if 
+				V rem 2 == 0	-> filter_odds(H);
+				true 			-> filter_evens(H)
+			end;
+		true -> H
+	end,
+	setValue_row(K,T,R,C,V,I,Rc,C+1,[delete_guess(V,H1)|Acc]);
+
+setValue_row(K,[H|T],R,C,V,I,R,Cc,Acc) when Cc == C+1 ->
+	GuardS = lists:member(a,I),
+	H1 = if 
+		GuardS -> 
+			if 
+				V rem 2 == 0	-> filter_odds(H);
+				true 			-> filter_evens(H)
+			end;
+		true -> H
+	end,
+	setValue_row(K,T,R,C,V,I,R,Cc+1,[delete_guess(V,H1)|Acc]);
+	
+setValue_row(K,[H|T],R,C,V,I,R,Cc,Acc) when Cc == C-1 ->
+	GuardS = lists:member(w,I),
+	H1 = if 
+		GuardS -> 
+			if 
+				V rem 2 == 0	-> filter_odds(H);
+				true 			-> filter_evens(H)
+			end;
+		true -> H
+	end,
+	setValue_row(K,T,R,C,V,I,R,Cc+1,[delete_guess(V,H1)|Acc]);
+
+setValue_row(K,[H|T],R,C,V,I,R,Cc,Acc) -> 
+	setValue_row(K,T,R,C,V,I,R,Cc+1,[delete_guess(V,H)|Acc]);
+setValue_row(K,[H|T],R,C,V,I,Rc,C,Acc) -> 
+	setValue_row(K,T,R,C,V,I,Rc,C+1,[delete_guess(V,H)|Acc]);
+setValue_row(K,[H|T],R,C,V,I,Rc,Cc,Acc) when 
+		(((R - (R-1) rem K) == (Rc - (Rc - 1) rem K)) andalso 
+		((C - (C-1) rem K) == (Cc -(Cc-1) rem K))) -> 
+	setValue_row(K,T,R,C,V,I,Rc,Cc+1,[delete_guess(V,H)|Acc]);
+setValue_row(K,[H|T],R,C,V,I,Rc,Cc,Acc) -> 
+	setValue_row(K,T,R,C,V,I,Rc,Cc+1,[H|Acc]).
+
+delete_guess(_, []) -> throw(no_solution);
 delete_guess(V, [V]) -> throw(no_solution);
 delete_guess(V, [H|T]) -> lists:delete(V,[H|T]);
 delete_guess(V, V) -> throw(no_solution);
