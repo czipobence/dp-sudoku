@@ -24,10 +24,7 @@ sudoku({K,Bo}) ->
 solve(K,Bo) ->
 	BoPP = preprocess(Bo),
 	Vals = allowed(K,BoPP),
-	Temp = apply_sw(K,Vals,BoPP),
-	%Temp.
-	%BoPP.
-	setValue(K,Temp,3,2,3,[a,s,w,n]).
+	setValue(K,Vals,3,2,3,[a,s,w,n]).
 
 setValue(K,Vals,R,C,V,I) ->
 	lists:reverse(setValue(K,Vals,R,C,V,I,1,[])).
@@ -39,7 +36,6 @@ setValue(K,[H|T],R,C,V,I,Rc,Acc) ->
 setValue_row(_,[],_,_,_,_,_,_,Acc) -> Acc;
 setValue_row(K,[_|T],R,C,V,I,R,C,Acc) -> 
 	setValue_row(K,T,R,C,V,I,R,C+1,[V|Acc]);
-
 setValue_row(K,[H|T],R,C,V,I,Rc,C,Acc) when Rc == R-1 ->
 	GuardS = lists:member(n,I),
 	H1 = if 
@@ -51,7 +47,6 @@ setValue_row(K,[H|T],R,C,V,I,Rc,C,Acc) when Rc == R-1 ->
 		true -> H
 	end,
 	setValue_row(K,T,R,C,V,I,Rc,C+1,[delete_guess(V,H1)|Acc]);
-	
 setValue_row(K,[H|T],R,C,V,I,Rc,C,Acc) when Rc == R+1 ->
 	GuardS = lists:member(s,I),
 	H1 = if 
@@ -63,7 +58,6 @@ setValue_row(K,[H|T],R,C,V,I,Rc,C,Acc) when Rc == R+1 ->
 		true -> H
 	end,
 	setValue_row(K,T,R,C,V,I,Rc,C+1,[delete_guess(V,H1)|Acc]);
-
 setValue_row(K,[H|T],R,C,V,I,R,Cc,Acc) when Cc == C+1 ->
 	GuardS = lists:member(a,I),
 	H1 = if 
@@ -75,7 +69,6 @@ setValue_row(K,[H|T],R,C,V,I,R,Cc,Acc) when Cc == C+1 ->
 		true -> H
 	end,
 	setValue_row(K,T,R,C,V,I,R,Cc+1,[delete_guess(V,H1)|Acc]);
-	
 setValue_row(K,[H|T],R,C,V,I,R,Cc,Acc) when Cc == C-1 ->
 	GuardS = lists:member(w,I),
 	H1 = if 
@@ -104,101 +97,6 @@ delete_guess(V, [V]) -> throw(no_solution);
 delete_guess(V, [H|T]) -> lists:delete(V,[H|T]);
 delete_guess(V, V) -> throw(no_solution);
 delete_guess(_,N) -> N.
-
-apply_sw(K,Vals,Bo) -> 
-	[[ apply_sw(K,Vals,Bo,R,C) 
-		|| C <- lists:seq(1,K*K) ]
-		|| R <- lists:seq(1,K*K) ].
-	
-apply_sw(K,Vals,Bo,R,C) ->
-	Restr = verify_to_sw_infos(K,Vals,Bo,R,C,nth_matr(Vals,R,C),nth_matr(Bo,R,C)),
-	apply_sw_neighbors(K,Vals,Bo,R,C,Restr).
-	
-apply_sw_neighbors(K,Value,Bo,R,C,Restr) ->
-	apply_w_next(K,Value,Bo,R,C,apply_s_above(Value,Bo,R,C, Restr)).
-	
-apply_s_above(_,_,1,_,Restr) -> Restr;
-apply_s_above(Value,Bo,R,C,Restr) -> 
-	Grd = lists:member(s,nth_matr(Bo,R-1,C)),
-	if  Grd
-		-> case nth_matr(Value,R-1,C) of
-			N when is_number(N) -> 
-				if is_list(Restr) ->
-					if (N rem 2 == 0) -> filter_odds(Restr);
-					true -> filter_evens(Restr)
-					end;
-				true -> 
-					if (N rem 2 == Restr rem 2) -> throw (no_solution);
-					true -> Restr
-					end
-				end;
-			_ -> Restr
-		end;
-		true -> Restr 
-	end.
-	
-apply_w_next(K,_,_,_,N,Restr) when N == K*K -> Restr;
-apply_w_next(_,Value,Bo,R,C,Restr) -> 
-	Grd = lists:member(w,nth_matr(Bo,R,C+1)),
-	if Grd
-		-> case nth_matr(Value,R,C+1) of
-			N when is_number(N) -> 
-				if is_list(Restr) ->
-					if (N rem 2 == 0) -> filter_odds(Restr);
-					true -> filter_evens(Restr)
-					end;
-				true -> 
-					if (N rem 2 == Restr rem 2) -> throw (no_solution);
-					true -> Restr
-					end
-				end;
-			_ -> Restr
-		end;
-		true -> Restr 
-	end.
-	
-verify_to_sw_infos(_,_,_,_,_,PV,[]) ->
-	PV;
-verify_to_sw_infos(K,Vals,Bo,R,C,PV,[s|T]) ->
-	if is_list(PV) ->
-		case nth_matr(Vals,R+1,C) of
-		N when is_number(N) ->
-			if (N rem 2 == 0) -> verify_to_sw_infos(K,Vals,Bo,R,C,filter_odds(PV),T);
-			true -> verify_to_sw_infos(K,Vals,Bo,R,C,filter_evens(PV),T)
-			end;
-		_ -> verify_to_sw_infos(K,Vals,Bo,R,C,PV,T)
-		end;
-	true ->
-		case nth_matr(Vals,R+1,C) of
-		N when is_number(N) -> 
-			if (PV rem 2) == (N rem 2) -> throw(no_solution);
-			true -> verify_to_sw_infos(K,Vals,Bo,R,C,PV,T)
-			end;
-		_ -> verify_to_sw_infos(K,Vals,Bo,R,C,PV,T)
-		end
-	end;
-verify_to_sw_infos(K,Vals,Bo,R,C,PV,[w|T]) ->
-	if is_list(PV) ->		
-		case nth_matr(Vals,R,C-1) of
-		N when is_number(N) ->
-			if (N rem 2 == 0) -> verify_to_sw_infos(K,Vals,Bo,R,C,filter_odds(PV),T);
-			true -> verify_to_sw_infos(K,Vals,Bo,R,C,filter_evens(PV),T)
-			end;
-		_ -> verify_to_sw_infos(K,Vals,Bo,R,C,PV,T)
-		end;
-	true ->
-		case nth_matr(Vals,R,C-1) of
-		N when is_number(N) -> 
-			if (PV rem 2) == (N rem 2) -> throw(no_solution);
-			true -> verify_to_sw_infos(K,Vals,Bo,R,C,PV,T)
-			end;
-		_ -> verify_to_sw_infos(K,Vals,Bo,R,C,PV,T)
-		end
-	end;
-verify_to_sw_infos(K,Vals,Bo,R,C,PV,[_|T]) ->
-	verify_to_sw_infos(K,Vals,Bo,R,C,PV,T).
-	
-
 
 %% @spec sudoku:preprocess(K::integer(), M::board()) -> M1::board()
 %% M1 egy tabla, ami a feldolgozott infokat tartaknazza, kiegeszitve 
@@ -238,7 +136,6 @@ allowed(K,Bo) -> [[ parse_ertek(ertekek(K,Bo,R,C))
 				  || R <- lists:seq(1,K*K) ].
 
 parse_ertek([]) -> throw(no_solution);
-parse_ertek([H]) -> H;
 parse_ertek(L) -> L.
 
 %% @spec sudoku:ertekek(K::integer(), M::board(), R::integer(), C::integer()) -> Vals::[integer()]
