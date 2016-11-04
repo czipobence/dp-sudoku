@@ -24,7 +24,29 @@ sudoku({K,Bo}) ->
 solve(K,Bo) ->
 	BoPP = preprocess(Bo),
 	Vals = allowed(K,BoPP),
-	setValue(K,Vals,3,2,3,[a,s,w,n]).
+	process_singles(K,Vals,BoPP).
+	
+process_singles(K,Vals,BoPP) ->
+	try process_one_single(Vals, BoPP,1) of 
+		{R,C,V,I} -> 
+			Result = setValue(K,Vals,R,C,V,I),
+			process_singles(K,Result,BoPP)
+	catch
+		throw:no_more_single -> Vals
+	end.
+
+process_one_single([],_,_) -> throw(no_more_single);
+process_one_single([HV|TV],[HB|TB],R) -> 
+	try process_one_single_row(HV,HB,R,1) of
+		Result -> Result
+	catch
+		throw:no_more_single -> process_one_single(TV,TB,R+1)
+	end.
+	
+process_one_single_row([],_,_,_) -> throw(no_more_single);
+process_one_single_row([[H]|_], [HB|_],R,C) -> {R,C,H,HB};
+process_one_single_row([_|TV], [_|TB],R,C) -> 
+	process_one_single_row(TV,TB,R,C+1).
 
 setValue(K,Vals,R,C,V,I) ->
 	lists:reverse(setValue(K,Vals,R,C,V,I,1,[])).
@@ -228,6 +250,13 @@ filter_odds([H|T]) ->
 	if
 		(H rem 2) == 0 -> filter_odds(T);
 		true -> [H| filter_odds(T)]
+	end;
+filter_odds(N) ->
+	if
+		N rem 2 == 0 -> 
+			throw(no_solution);
+		true ->
+			N
 	end.
 
 filter_evens([]) -> [];
@@ -235,9 +264,14 @@ filter_evens([H|T]) ->
 	if 
 		(H rem 2 == 1) -> filter_evens(T);
 		true -> [H | filter_evens(T)]
+	end;
+filter_evens(N) ->
+	if
+		N rem 2 == 1 -> 
+			throw(no_solution);
+		true ->
+			N
 	end.
-
-is_even(V) -> V rem 2 == 0.
 
 %% @spec sudoku:intersection(L1::[any()], L2::[any()]) -> L::[any()].
 %% L L1 L2 szigoruan monoton novekvo listak metszete
