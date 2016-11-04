@@ -26,8 +26,8 @@ solve(K,Bo) ->
 	Vals = allowed(K,BoPP),
 	Temp = process_singles(K,Vals,BoPP),
 	case shortest_list(Temp) of
-		0 -> [Temp];
-		_ -> "TODO - more possible solution" 
+		{0,0,0} -> [Temp];
+		SE -> {"TODO - more possible solution", SE} 
 	end.
 	
 process_singles(K,Vals,BoPP) ->
@@ -246,25 +246,25 @@ set_nth_proc_element(E,_,_,_,_,_) -> E.
 submatrix(Mx, StartX, StartY, Width, Height) ->
 	[lists:sublist(L, StartY, Height) || L <- lists:sublist(Mx, StartX, Width)].
 	
-shortest_list(Mx) -> shortest_list(Mx,0).
+shortest_list(Mx) -> shortest_list(Mx,1,{0,0,0}).
 
-shortest_list([], Cnt) -> Cnt;
-shortest_list([H|T],Cnt) -> 
-	shortest_list(T, shortest_list_row(H,Cnt)).
+shortest_list([], _, Cnt) -> Cnt;
+shortest_list([H|T], R, Cnt) -> 
+	shortest_list(T, R+1, shortest_list_row(H,R,1,Cnt)).
 	
-shortest_list_row([],Cnt) -> Cnt;
-shortest_list_row([H|T], Cnt) ->
+shortest_list_row([],_,_,Cnt) -> Cnt;
+shortest_list_row([H|T],R,C, {Min,MinR,MinC}) ->
 	case H of
 		[] ->
 			throw(no_solution);
 		[_|_] ->
 			if
-				((length(H) < Cnt) or (Cnt == 0)) -> 
-					shortest_list_row(T,length(H));
+				((length(H) < Min) or (Min == 0)) -> 
+					shortest_list_row(T,R,C+1, {length(H),R,C});
 				true ->
-					shortest_list_row(T,Cnt)
+					shortest_list_row(T,R,C+1,{Min,MinR,MinC})
 			end;
-		_ -> shortest_list_row(T,Cnt)
+		_ -> shortest_list_row(T,R,C+1,{Min,MinR,MinC})
 	end.
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
