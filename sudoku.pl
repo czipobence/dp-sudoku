@@ -9,21 +9,53 @@
 % sudoku(SSpec, SSol):
 % SSol az SSpec feladványt kielégítő megoldás.
 % :- pred sudoku(sspec::in, ssol::out).
-sudoku(s(K,Bo),Sol) :- sudoku(K,Bo,1,Sol).
+sudoku(s(K,Bo),Sol) :-
+	preprocess(Bo,BoPP),
+	allowed(K,BoPP,1,Sol).
 
-sudoku(K,_,R,[]) :- R is K*K + 1.
-sudoku(K,Bo,R,[H|T]) :-
+allowed(K,_,R,[]) :- R is K*K + 1.
+allowed(K,Bo,R,[H|T]) :-
 	R < K * K + 1,
-	sudoku_row(K,Bo,R,1,H),
+	allowed_row(K,Bo,R,1,H),
 	R1 is R + 1,
-	sudoku(K,Bo,R1,T).
+	allowed(K,Bo,R1,T).
 
-sudoku_row(K,_,_,C,[]) :- C is K * K +1.
-sudoku_row(K,Bo,R,C,[H|T]) :-
+allowed_row(K,_,_,C,[]) :- C is K * K +1.
+allowed_row(K,Bo,R,C,[H|T]) :-
 	C < K * K +1,
 	ertekek(s(K,Bo),R-C,H),
 	C1 is C + 1,
-	sudoku_row(K,Bo,R,C1,T).
+	allowed_row(K,Bo,R,C1,T).
+
+preprocess(Bo,BoPP) :-
+	preprocess([],Bo,[],BoPPR),
+	reverse(BoPPR,BoPP).
+preprocess(_,[],BoPP,BoPP).
+preprocess(PreR,[CurrR|T],Acc,PP) :-
+	preprocess_row(PreR,CurrR,[],PRR),
+	reverse(PRR,PR),
+	preprocess(CurrR,T, [PR | Acc],PP).
+	
+
+%preprocess_row(_,[],Acc,Acc).
+preprocess_row([],[CurrI], Acc, [CurrI|Acc]).
+preprocess_row([],[CurrI,NextI|CurrT],Acc,PP) :-
+	(	member(w,NextI) -> preprocess_row([],[NextI|CurrT], [[a|CurrI]|Acc],PP)
+	;	preprocess_row([],[NextI|CurrT], [CurrI|Acc],PP)
+	).
+preprocess_row([PreI],[CurrI],Acc,PP) :-
+	( 	member(s,PreI) -> PP = [[n|CurrI]|Acc]
+	;	PP = [CurrI | Acc]
+	).
+preprocess_row([PreI|PreT], [CurrI,NextI|CurrT], Acc, PP) :-
+	(	member(s, PreI) -> CurrI1 = [n|CurrI]
+	;	CurrI1 = CurrI	
+	),
+	(	member(w, NextI) -> CurrI2 = [a|CurrI1]
+	;	CurrI2 = CurrI1	
+	),
+	preprocess_row(PreT, [NextI|CurrT], [CurrI2|Acc],PP).
+		
 
 
 % :- type col  == int.
@@ -114,7 +146,7 @@ limited_to(V,K,N) :-
 	bet(1,Top,N),
 	( V = o -> odd(N)
 	; V = e -> even(N)
-	; (V = s; V = w; V = [])
+	; (V = s; V = w; V = n; V = a; V = [])
 	).
 
 %allowed_by(V,K,N)
@@ -127,7 +159,7 @@ allowed_by(V,K,N) :-
 	Top is K*K,
 	bet(1,Top,N),
 	( V = v(Val) -> N \= Val;
-	 (V = s; V=e; V=w; V=o; V=[])
+	 (V = s; V = w; V = n; V = a; V=e; V=o; V=[])
 	).
 
 %even(N)
