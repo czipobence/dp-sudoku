@@ -12,7 +12,27 @@
 sudoku(s(K,Bo),Sol) :-
 	preprocess(Bo,BoPP),
 	allowed(K,BoPP,1,All),
-	set_value(K,All,(2,2,3,[a,n,w,s]),Sol).
+	process_singles(K,All,BoPP,Sol).
+
+process_singles(K,V,Bo,Pr) :-
+	(	process_one_single(V,Bo,1,S) ->
+			FI = S,
+			set_value(K,V,FI,V1),
+			process_singles(K,V1,Bo,Pr)
+	;	Pr = V
+	).
+
+process_one_single([],_,_,_) :- false.
+process_one_single([HV|TV],[HB|TB],R,Pr) :-
+	(	process_one_single_row(HV,HB,R,1,Pr)
+	;	R1 is R+1, process_one_single(TV,TB,R1,Pr)
+	).
+
+process_one_single_row([],_,_,_,_) :- false.
+process_one_single_row([H|T],[HB|TB],R,C,Pr) :-
+	(	[N] = H -> Pr = (R,C,N,HB)
+	;	C1 is C+1, process_one_single_row(T,TB,R,C1,Pr)
+	).
 
 % :- type fieldinfo ---> (int,int,int,list(info))
 % set_value(K,V,(R,C,N,I),V1):
@@ -35,22 +55,36 @@ set_value_row(K,[H|T],(R,C,N,I),Rc,Cc,Acc,HU) :-
 			(	C = Cc -> PF = N
 			;	Cc is C+1, member(a,I) -> filter_parity(H,N,PF)
 			;	Cc is C-1, member(w,I) -> filter_parity(H,N,PF)
-			;	delete(H,N,PF)
+			;	my_del(H,N,PF)
 			)
 	;	C =:= Cc ->
 			(	Rc is R+1, member(s,I) -> filter_parity(H,N,PF)
 			;	Rc is R-1, member(n,I) -> filter_parity(H,N,PF)
-			;	delete(H,N,PF)
+			;	my_del(H,N,PF)
 			)
-	;	same_cell(K,R,C,Rc,Cc) -> delete(H,N,PF)
+	;	same_cell(K,R,C,Rc,Cc) -> my_del(H,N,PF)
 	;	PF = H	  
 	),
 	(	PF = [] -> fail %no solution
 	; 	Cc1 is Cc + 1, set_value_row(K,T,(R,C,N,I),Rc,Cc1,[PF|Acc],HU)
 	).
 
-% filter_parity(L,V,LF): LF olyan lista, amelyben L azon elemei szere-
-% pelnek, melyeknek paritasa kulonbozik V paritasatol
+my_del(K,N,K) :-
+	number(K),
+	N \= K. 
+my_del([H|T],N,PF) :-
+	 delete([H|T],N,PF).
+		
+
+% filter_parity(L,V,LF): ha L egy lista, LF olyan lista, amelyben L
+% azon elemei szerepelnek, melyeknek paritasa kulonbozik V paritasatol,
+% ha L egy egesz, akkor LF=L, ha L es V paritasa kulonbozik, kulonben a
+% fuggveny meghiusul
+filter_parity(N,V,N) :-
+	number(N),
+	(	even(N), odd(V)
+	;	odd(N), even(V)
+	).
 filter_parity(L,V,LF) :-
 	(	even(V) -> filter_odds(L,LF)
 	;	filter_evens(L,LF)
