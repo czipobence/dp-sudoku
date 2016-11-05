@@ -12,7 +12,7 @@
 sudoku(s(K,Bo),Sol) :-
 	preprocess(Bo,BoPP),
 	allowed(K,BoPP,1,All),
-	set_value(K,All,(2,2,3,[]),Sol).
+	set_value(K,All,(2,2,3,[a,n,w,s]),Sol).
 
 % :- type fieldinfo ---> (int,int,int,list(info))
 % set_value(K,V,(R,C,N,I),V1):
@@ -31,11 +31,51 @@ set_value(K,[HV|TV],FI,Rc,Acc,V1) :-
 
 set_value_row(_,[],_,_,_,Acc,Acc).
 set_value_row(K,[H|T],(R,C,N,I),Rc,Cc,Acc,HU) :-
-	Cc1 is Cc + 1,
-	(	R = Rc, C = Cc -> PF = N
-	;	PF = H
+	(	R =:= Rc ->
+			(	C = Cc -> PF = N
+			;	Cc is C+1, member(a,I) -> filter_parity(H,N,PF)
+			;	Cc is C-1, member(w,I) -> filter_parity(H,N,PF)
+			;	delete(H,N,PF)
+			)
+	;	C =:= Cc ->
+			(	Rc is R+1, member(s,I) -> filter_parity(H,N,PF)
+			;	Rc is R-1, member(n,I) -> filter_parity(H,N,PF)
+			;	delete(H,N,PF)
+			)
+	;	same_cell(K,R,C,Rc,Cc) -> delete(H,N,PF)
+	;	PF = H	  
 	),
+	Cc1 is Cc + 1,
 	set_value_row(K,T,(R,C,N,I),Rc,Cc1,[PF | Acc],HU).
+
+% filter_parity(L,V,LF): LF olyan lista, amelyben L azon elemei szere-
+% pelnek, melyeknek paritasa kulonbozik V paritasatol
+filter_parity(L,V,LF) :-
+	(	even(V) -> filter_odds(L,LF)
+	;	filter_evens(L,LF)
+	).
+
+% same_cell(K,R1,C1,R2,C2): teljesul, ha egy K parameteru sudokuban az
+% R1-C1 es az R2-C2 mezok azonos cellaban vannak.
+same_cell(K,R1,C1,R2,C2) :-
+	PR is R1 - ((R1 - 1) mod K),
+	PR is R2 - ((R2 - 1) mod K),
+	PC is C1 - ((C1 - 1) mod K),
+	PC is C2 - ((C2 - 1) mod K).
+
+% filter_odds(L,LF): LF lista L listabol a paratlan szamok
+filter_odds([],[]).
+filter_odds([H|T],LF) :-
+	(	odd(H) -> [HF|TF] = LF, HF = H, filter_odds(T,TF)
+	;	filter_odds(T,LF)
+	).  
+
+% filter_evens(L,LF): LF lista L listabol a paros szamok
+filter_evens([],[]).
+filter_evens([H|T],LF) :-
+	(	even(H) -> [HF|TF] = LF, HF = H, filter_evens(T,TF)
+	;	filter_evens(T,LF)
+	).  
 
 allowed(K,_,R,[]) :- R is K*K + 1.
 allowed(K,Bo,R,[H|T]) :-
