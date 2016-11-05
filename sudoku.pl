@@ -45,8 +45,9 @@ set_value_row(K,[H|T],(R,C,N,I),Rc,Cc,Acc,HU) :-
 	;	same_cell(K,R,C,Rc,Cc) -> delete(H,N,PF)
 	;	PF = H	  
 	),
-	Cc1 is Cc + 1,
-	set_value_row(K,T,(R,C,N,I),Rc,Cc1,[PF | Acc],HU).
+	(	PF = [] -> fail %no solution
+	; 	Cc1 is Cc + 1, set_value_row(K,T,(R,C,N,I),Rc,Cc1,[PF|Acc],HU)
+	).
 
 % filter_parity(L,V,LF): LF olyan lista, amelyben L azon elemei szere-
 % pelnek, melyeknek paritasa kulonbozik V paritasatol
@@ -88,6 +89,7 @@ allowed_row(K,_,_,C,[]) :- C is K * K +1.
 allowed_row(K,Bo,R,C,[H|T]) :-
 	C < K * K +1,
 	ertekek(s(K,Bo),R-C,H),
+	H \= [],
 	C1 is C + 1,
 	allowed_row(K,Bo,R,C1,T).
 
