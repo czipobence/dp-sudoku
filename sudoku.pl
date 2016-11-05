@@ -12,7 +12,14 @@
 sudoku(s(K,Bo),Sol) :-
 	preprocess(Bo,BoPP),
 	allowed(K,BoPP,1,All),
-	process_singles(K,All,BoPP,Sol).
+	process_singles(K,All,BoPP,Sol1),
+	split_by(K,Sol1,BoPP,3,3,[1,4],[],Sol).
+
+split_by(K,V,_,R,C,[H|_],Inf,MO) :-
+	set_value(K,V,(R,C,H,Inf),MO).
+
+split_by(K,V,Bo,R,C,[_|T],Inf,MO) :-
+	split_by(K,V,Bo,R,C,T,Inf,MO).
 
 process_singles(K,V,Bo,Pr) :-
 	(	process_one_single(V,Bo,1,S) ->
