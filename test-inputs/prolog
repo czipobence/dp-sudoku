@@ -1,0 +1,31 @@
+%Example test case from the task description
+sudoku(s(2, [[[v(2)],         [w],         [e],          []],
+             [    [],  [e,s,v(4)],          [],         [o]],
+             [    [],          [],      [v(1)],          []],
+             [    [],         [w],          [],          []]]),L).
+
+%preprocess test
+sudoku(s(2, [[   [s],       [w,s],       [w,s],       [w,s]],
+             [   [s],       [w,s],       [w,s],       [w,s]],
+             [   [s],       [w,s],       [w,s],       [w,s]],
+             [    [],         [w],         [w],         [w]]]),L).
+
+
+%corssed out values
+sudoku(s(2, [[    [],          [],          [],          []],
+             [    [],      [v(3)],          [],          []],
+             [    [],          [],          [],      [v(2)]],
+             [    [],          [],          [],          []]]),L).
+
+%splitting - 4 possile solutions
+sudoku(s(2, [[[v(1)],      [v(4)],          [],          []],
+             [[v(2)],      [v(3)],          [],          []],
+             [[v(3)],      [v(2)],          [],      [v(2)]],
+             [[v(4)],      [v(1)],          [],          []]]),L).
+
+%third test case of the framework
+sudoku(s(2, [[[v(3)],         [w],         [s],          []],
+             [   [e],    [v(1),w],          [],       [o,w]],
+             [   [s],          [],         [s],       [e,s]],
+             [    [],      [v(4)],         [o],          []]]),L).
+
