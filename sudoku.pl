@@ -7,7 +7,7 @@
 % :- type ssol == list(list(int)).
 
 % sudoku(SSpec, SSol):
-% SSol az SSpec feladványt kielégítő megoldás.
+% SSol az SSpec feladvanyt kielegito megoldas.
 % :- pred sudoku(sspec::in, ssol::out).
 sudoku(s(K,Bo),Sol) :-
 	use_module(library(lists)),
@@ -15,6 +15,9 @@ sudoku(s(K,Bo),Sol) :-
 	allowed(K,BoPP,1,All),
 	solve(K,All,BoPP,Sol).
 
+% solve(K,V,Bo,Sol):
+% Sol V lehetseges mezoertekek es Bo mezoinformaciok mellett a
+% feladvany megoldasa
 solve(K,V,Bo,Sol) :-
 	process_singles(K,V,Bo,Pr),
 	shortest_list(Pr,SL),
@@ -25,49 +28,73 @@ solve(K,V,Bo,Sol) :-
 		solve(K,Sp,Bo,Sol)
 	).
 
+% split_by(K,V,Bo,R,C,L,Inf,MO):
+% MO a lehetseges mezoertekek, miutan V lehetseges mezoertekeket
+% tartalmazo matrix R. soranak C. oszlopaban a lehetseges erteket
+% lekotjuk Inf infok mellett L lista valamely elemere.  
 split_by(K,V,_,R,C,[H|_],Inf,MO) :-
-	set_value(K,V,(R,C,H,Inf),MO).
-
+	bind_value(K,V,(R,C,H,Inf),MO).
 split_by(K,V,Bo,R,C,[_|T],Inf,MO) :-
 	split_by(K,V,Bo,R,C,T,Inf,MO).
 
+% process_singles(K,V,Bo,Pr):
+% Pr egy olyan lehetseges ertekeket tartalmazo lista, ami altal a
+% megengedett megoldasok ugyanazok, mint V altal, ugyanakkor nem
+% tartalmaz olyan elemet, ami egy egy elemu lista.
 process_singles(K,V,Bo,Pr) :-
-	(	process_one_single(V,Bo,1,S) ->
+	(	find_one_single(V,Bo,1,S) ->
 			FI = S,
-			set_value(K,V,FI,V1),
+			bind_value(K,V,FI,V1),
 			process_singles(K,V1,Bo,Pr)
 	;	Pr = V
 	).
 
-process_one_single([],_,_,_) :- false.
-process_one_single([HV|TV],[HB|TB],R,Pr) :-
-	(	process_one_single_row(HV,HB,R,1,Pr)
-	;	R1 is R+1, process_one_single(TV,TB,R1,Pr)
+% find_one_single(V,Bo,R,Pr):
+% Pr olyan négyes, ami V egy olyan elemenek sorat, oszlopat, erteket es
+% a hozzatartozo infok listajat tartalmazza, ami egyetlen egy
+% lehetseges erteket enged meg.
+find_one_single([],_,_,_) :- false.
+find_one_single([HV|TV],[HB|TB],R,Pr) :-
+	(	find_one_single_row(HV,HB,R,1,Pr)
+	;	R1 is R+1, find_one_single(TV,TB,R1,Pr)
 	).
 
-process_one_single_row([],_,_,_,_) :- false.
-process_one_single_row([H|T],[HB|TB],R,C,Pr) :-
+% find_one_single_row(VR,BR,R,C,Pr):
+% Pr olyan négyes, ami VR sor egy olyan elemenek sorat, oszlopat,
+% erteket es a hozzatartozo infok listajat tartalmazza, ami egyetlen
+% egy lehetseges erteket enged meg.
+find_one_single_row([],_,_,_,_) :- false.
+find_one_single_row([H|T],[HB|TB],R,C,Pr) :-
 	(	[N] = H -> Pr = (R,C,N,HB)
-	;	C1 is C+1, process_one_single_row(T,TB,R,C1,Pr)
+	;	C1 is C+1, find_one_single_row(T,TB,R,C1,Pr)
 	).
 
 % :- type fieldinfo ---> (int,int,int,list(info))
-% set_value(K,V,(R,C,N,I),V1):
+% bind_value(K,V,(R,C,N,I),V1):
 % V1 a V, K parameteru megoldashalmaz szukitese az R. sor C. oszlop    
 % N-re rogzitesevel V infok mellett
-set_value(K,V,FI,V1) :-
-	set_value(K,V,FI,1,[],V1R),
+bind_value(K,V,FI,V1) :-
+	bind_value(K,V,FI,1,[],V1R),
 	reverse(V1R,V1).
 
-set_value(_,[],_,_,Acc,Acc).
-set_value(K,[HV|TV],FI,Rc,Acc,V1) :-
-	set_value_row(K,HV,FI,Rc,1,[],HUR),
+% bind_value(K,V,FI,Rc,Acc,V1):
+% V1 Acc es  azon lehetseges mezoertekekek osszeillesztese, amik V
+% lehetseges mezoertekek mellett tovabbra is lehetsegesek maradnak, ha
+% a FI-ben megadottak szerint az egyik lehetseges erteket lekotjuk. 
+bind_value(_,[],_,_,Acc,Acc).
+bind_value(K,[HV|TV],FI,Rc,Acc,V1) :-
+	bind_value_row(K,HV,FI,Rc,1,[],HUR),
 	reverse(HUR,HU),
 	Rc1 is Rc + 1,
-	set_value(K,TV,FI,Rc1, [HU|Acc] ,V1).
+	bind_value(K,TV,FI,Rc1, [HU|Acc] ,V1).
 
-set_value_row(_,[],_,_,_,Acc,Acc).
-set_value_row(K,[H|T],(R,C,N,I),Rc,Cc,Acc,HU) :-
+% bind_value_row(K,V,FI,Rc,Cc,Acc,HU):
+% HU Acc es azon lehetseges mezoertekek unioja, melyek V sorban
+% (amelynek elso eleme az eredeti matrix Rc-CC eleme) lehetnek,
+% amennyiben FI-ben megadottak szerint a lehetseges ertekeket
+% tartalmazo matrix egyik elemenek ertekez lekotjuk.
+bind_value_row(_,[],_,_,_,Acc,Acc).
+bind_value_row(K,[H|T],(R,C,N,I),Rc,Cc,Acc,HU) :-
 	(	R =:= Rc ->
 			(	C = Cc -> PF = N
 			;	Cc is C+1, member(a,I) -> filter_parity(H,N,PF)
@@ -83,9 +110,11 @@ set_value_row(K,[H|T],(R,C,N,I),Rc,Cc,Acc,HU) :-
 	;	PF = H	  
 	),
 	(	PF = [] -> fail %no solution
-	; 	Cc1 is Cc + 1, set_value_row(K,T,(R,C,N,I),Rc,Cc1,[PF|Acc],HU)
+	; 	Cc1 is Cc + 1, bind_value_row(K,T,(R,C,N,I),Rc,Cc1,[PF|Acc],HU)
 	).
 
+% my_del(L,N,L1): L1 L elemei (vagy erteke ha egy szam), elhagyva N-et.
+% Amennyibben L1 ureslista lenne, meghiusul
 my_del(K,N,K) :-
 	number(K),
 	N \= K. 
@@ -129,6 +158,9 @@ filter_evens([H|T],LF) :-
 	;	filter_evens(T,LF)
 	).  
 
+% allowed(K,Bo,R,V): V egy az s(K,Bo) feladvany soran a mezok megadott
+% infoi alapjan lehetseges ertekeinek matrixanak az R. sortol kezdve
+% vett reszmatrixa
 allowed(K,_,R,[]) :- R is K*K + 1.
 allowed(K,Bo,R,[H|T]) :-
 	R < K * K + 1,
@@ -136,6 +168,9 @@ allowed(K,Bo,R,[H|T]) :-
 	R1 is R + 1,
 	allowed(K,Bo,R1,T).
 
+% allowed_row(K,Bo,R,C,L): L az s(K,Bo) feladvany altal megadott
+% lehetseges mezoertekek alapjan az R. sornak a C. elemtol vett
+% reszere vonatkozo lehetseges ertekek listaja.
 allowed_row(K,_,_,C,[]) :- C is K * K +1.
 allowed_row(K,Bo,R,C,[H|T]) :-
 	C < K * K +1,
@@ -144,6 +179,8 @@ allowed_row(K,Bo,R,C,[H|T]) :-
 	C1 is C + 1,
 	allowed_row(K,Bo,R,C1,T).
 
+% preprocess(Bo,BoPP): BoPP a Bo tabla altal megadott infok, kibovitve
+% az eszak(n) es kelet(a) szomszedossaggal.
 preprocess(Bo,BoPP) :-
 	preprocess([],Bo,[],BoPPR),
 	reverse(BoPPR,BoPP).
@@ -154,7 +191,10 @@ preprocess(PreR,[CurrR|T],Acc,PP) :-
 	preprocess(CurrR,T, [PR | Acc],PP).
 	
 
-%preprocess_row(_,[],Acc,Acc).
+% preprocess_row(Pre,Curr,Acc,PPR): PPR Acc osszefuzve Curr sor
+% elofeldolgozasanak eredmenyevel, felteve, hogy Pre sor eppen Curr
+% sor elott talalhato a matrixban, es ha Curr a matrix elso sora, akkor
+% Pre az ures lista.
 preprocess_row([],[CurrI], Acc, [CurrI|Acc]).
 preprocess_row([],[CurrI,NextI|CurrT],Acc,PP) :-
 	(	member(w,NextI) -> 
@@ -174,16 +214,22 @@ preprocess_row([PreI|PreT], [CurrI,NextI|CurrT], Acc, PP) :-
 	),
 	preprocess_row(PreT, [NextI|CurrT], [CurrI2|Acc],PP).
 		
-
+% :- type slinfo ---> (int,int,int,list(int))
+% shortest_list(Mx,SL): SL az MX matrixban a legrovidebb listat leiro
+% negyes (slinfo), azaz hossza, sor es oszlopszama, illetve tartalma.
 shortest_list(Mx,SL) :-
 	shortest_list(Mx,1,(0,0,0,[]),SL).
 
+% shortest_list(Mx,R,Cnt,SL): SL Cnt es Mx matrixban talalhato
+% legrovidebb lista kozul a rovidebbet leiro slinfo. 
 shortest_list([],_,Cnt,Cnt).
 shortest_list([H|T],R,Cnt,SL) :-
 	R1 is R +1,
 	shortest_list_row(H,R,1,Cnt,Cnt1),
 	shortest_list(T,R1,Cnt1,SL).
 
+% shortest_list_for(L,R,C,Cnt,SL): SL Cnt és L listaban talalhato
+% legrovidebb lista kozul a rovidebbet leiro slinfo.
 shortest_list_row([],_,_,Cnt,Cnt).
 shortest_list_row([H|T],R,C,Cnt,SL) :-
 	C1 is C + 1,
