@@ -63,7 +63,7 @@ solve(K, Vals,Bo) ->
 %% valamelyiket lekotjuk. 
 split_by(_,_,_,_,_,[],_,Acc) -> Acc;
 split_by(K,Vals,Bo,R,C,[H|T],Inf,Acc) ->
-	try bind_value(K,Vals,{R,C,H,Inf}) of
+	try bind_value(K,Vals,R,C,H,Inf) of
 		V -> split_by(K,Vals,Bo,R,C,T,Inf, merge(solve(K,V,Bo),Acc))
 	catch
 		throw:no_solution -> split_by(K,Vals,Bo,R,C,T,Inf, Acc)
@@ -75,8 +75,8 @@ split_by(K,Vals,Bo,R,C,[H|T],Inf,Acc) ->
 %% elem lekotese BoPP mezoinfok mellett
 process_singles(K,Vals,BoPP) ->
 	try process_one_single(Vals, BoPP,1) of 
-		FI -> 
-			Result = bind_value(K,Vals,FI),
+		{R,C,N,Inf} -> 
+			Result = bind_value(K,Vals,R,C,N,Inf),
 			process_singles(K,Result,BoPP)
 	catch
 		throw:no_more_single -> Vals
@@ -101,39 +101,41 @@ process_one_single_row([[H]|_], [HB|_],R,C) -> {R,C,H,HB};
 process_one_single_row([_|TV], [_|TB],R,C) -> 
 	process_one_single_row(TV,TB,R,C+1).
 
-%% @type finfo() = {integer(),integer(),integer(),field()}.
-%% informacio egy lekotendo mezorol: rendre sora, oszlopa, erteke es a 
-%% mezore korabban megadott infok (amiket persze az ertek kielegit)
+%% legyen R,C,N,I informacio egy lekotendo mezorol: R a sora, 
+%% C az oszlopa, N az erteke es a mezore korabban megadott I infok 
+%% (amiket persze N kielegit)
 
-%% @spec sudoku:bind_value(K::size(),Vals::psol(),FI::finfo()) ->
-%%       Sol::psol().
+%% @spec sudoku:bind_value(K::size(),Vals::psol(),R::integer(),
+%%       C::integer(),N::integer,I::[info]) -> Sol::psol().
 %% Sol a lehetseges ertekek azutan, hogy K parameteru sudoku Vals 
-%% mezoinek lehetseges ertekei kozul egyet a FI mezoleiro alapjan
+%% mezoinek lehetseges ertekei kozul egyet a R,C,N,I mezoleiro alapjan
 %% lekotunk.
-bind_value(K,Vals,FI) ->
-	lists:reverse(bind_value(K,Vals,FI,1,[])).
+bind_value(K,Vals,R,C,N,Inf) ->
+	lists:reverse(bind_value(K,Vals,R,C,N,Inf,1,[])).
 
-%% @spec sudoku:bind_value(K::size(),Vals::[prow()],FI::finfo(),
-%%       Rc::integer(), Acc::[prow()]) -> Sol::psol()-
+%% @spec sudoku:bind_value(K::size(),Vals::[prow()],R::integer(),
+%%       C::integer(),N::integer,I::[info], Rc::integer(),
+%%       Acc::[prow()]) -> Sol::psol().
 %% Sol Acc Rc-1 soru matrix es egy olyan matrix osszefuzve, ami
-%% tartalmazza a frissitett lehetseges ertekeket egy FI letkotes utan, 
-%% felteve hogy Vals az eredeti lehetseges ertekek reszmatrixa, az Rc.
-%% sortol kezdve
-bind_value(_,[],_,_,Acc) -> Acc;
-bind_value(K,[H|T],FI,Rc,Acc) ->
-	bind_value(K,T,FI,Rc+1, 
-			[lists:reverse(bind_value_row(K,H,FI,Rc,1,[]))|Acc]).
+%% tartalmazza a frissitett lehetseges ertekeket egy R,C,N,I letkotes
+%% utan, felteve hogy Vals az eredeti lehetseges ertekek reszmatrixa,
+%% az Rc. sortol kezdve
+bind_value(_,[],_,_,_,_,_,Acc) -> Acc;
+bind_value(K,[H|T],R,C,N,Inf,Rc,Acc) ->
+	bind_value(K,T,R,C,N,Inf,Rc+1, 
+			[lists:reverse(bind_value_row(K,H,R,C,N,Inf,Rc,1,[]))|Acc]).
 	
-%% @spec sudoku:bind_value_row(K::size(), CR::[possib()],FI::finfo(),
-%%       Rc::integer(), Cc::integer(), Acc::[possib()]) -> SR::prow().
+%% @spec sudoku:bind_value_row(K::size(), CR::[possib()],R::integer(),
+%%       C::integer(),N::integer,I::[info], Rc::integer(),
+%%       Cc::integer(), Acc::[possib()]) -> SR::prow().
 %% SR egy lehetseges megoldassor frissitve egy K parameteru sudokuban,
-%% FI parameteru lekotes elvegzese utan, amennyiben Acc tartalmazza a 
-%% sor Cc. eleme elotti ertekek frissiteset CR meg a Cc elemtol kezde
+%% R,C,N,I parameteru lekotes elvegzese utan, amennyiben Acc tartalmazza
+%% a sor Cc. eleme elotti ertekek frissiteset CR meg a Cc elemtol kezde
 %% a sor elemeit
-bind_value_row(_,[],_,_,_,Acc) -> Acc;
-bind_value_row(K,[_|T],{R,C,V,I},R,C,Acc) -> 
-	bind_value_row(K,T,{R,C,V,I},R,C+1,[V|Acc]);
-bind_value_row(K,[H|T],{R,C,V,I},Rc,C,Acc) when Rc == R-1 ->
+bind_value_row(_,[],_,_,_,_,_,_,Acc) -> Acc;
+bind_value_row(K,[_|T],R,C,V,I,R,C,Acc) -> 
+	bind_value_row(K,T,R,C,V,I,R,C+1,[V|Acc]);
+bind_value_row(K,[H|T],R,C,V,I,Rc,C,Acc) when Rc == R-1 ->
 	GuardS = lists:member(n,I),
 	H1 = if 
 		GuardS -> 
@@ -143,8 +145,8 @@ bind_value_row(K,[H|T],{R,C,V,I},Rc,C,Acc) when Rc == R-1 ->
 			end;
 		true -> H
 	end,
-	bind_value_row(K,T,{R,C,V,I},Rc,C+1,[delete_guess(V,H1)|Acc]);
-bind_value_row(K,[H|T],{R,C,V,I},Rc,C,Acc) when Rc == R+1 ->
+	bind_value_row(K,T,R,C,V,I,Rc,C+1,[delete_guess(V,H1)|Acc]);
+bind_value_row(K,[H|T],R,C,V,I,Rc,C,Acc) when Rc == R+1 ->
 	GuardS = lists:member(s,I),
 	H1 = if 
 		GuardS -> 
@@ -154,8 +156,8 @@ bind_value_row(K,[H|T],{R,C,V,I},Rc,C,Acc) when Rc == R+1 ->
 			end;
 		true -> H
 	end,
-	bind_value_row(K,T,{R,C,V,I},Rc,C+1,[delete_guess(V,H1)|Acc]);
-bind_value_row(K,[H|T],{R,C,V,I},R,Cc,Acc) when Cc == C+1 ->
+	bind_value_row(K,T,R,C,V,I,Rc,C+1,[delete_guess(V,H1)|Acc]);
+bind_value_row(K,[H|T],R,C,V,I,R,Cc,Acc) when Cc == C+1 ->
 	GuardS = lists:member(a,I),
 	H1 = if 
 		GuardS -> 
@@ -165,8 +167,8 @@ bind_value_row(K,[H|T],{R,C,V,I},R,Cc,Acc) when Cc == C+1 ->
 			end;
 		true -> H
 	end,
-	bind_value_row(K,T,{R,C,V,I},R,Cc+1,[delete_guess(V,H1)|Acc]);
-bind_value_row(K,[H|T],{R,C,V,I},R,Cc,Acc) when Cc == C-1 ->
+	bind_value_row(K,T,R,C,V,I,R,Cc+1,[delete_guess(V,H1)|Acc]);
+bind_value_row(K,[H|T],R,C,V,I,R,Cc,Acc) when Cc == C-1 ->
 	GuardS = lists:member(w,I),
 	H1 = if 
 		GuardS -> 
@@ -176,18 +178,18 @@ bind_value_row(K,[H|T],{R,C,V,I},R,Cc,Acc) when Cc == C-1 ->
 			end;
 		true -> H
 	end,
-	bind_value_row(K,T,{R,C,V,I},R,Cc+1,[delete_guess(V,H1)|Acc]);
+	bind_value_row(K,T,R,C,V,I,R,Cc+1,[delete_guess(V,H1)|Acc]);
 
-bind_value_row(K,[H|T],{R,C,V,I},R,Cc,Acc) -> 
-	bind_value_row(K,T,{R,C,V,I},R,Cc+1,[delete_guess(V,H)|Acc]);
-bind_value_row(K,[H|T],{R,C,V,I},Rc,C,Acc) -> 
-	bind_value_row(K,T,{R,C,V,I},Rc,C+1,[delete_guess(V,H)|Acc]);
-bind_value_row(K,[H|T],{R,C,V,I},Rc,Cc,Acc) when 
+bind_value_row(K,[H|T],R,C,V,I,R,Cc,Acc) -> 
+	bind_value_row(K,T,R,C,V,I,R,Cc+1,[delete_guess(V,H)|Acc]);
+bind_value_row(K,[H|T],R,C,V,I,Rc,C,Acc) -> 
+	bind_value_row(K,T,R,C,V,I,Rc,C+1,[delete_guess(V,H)|Acc]);
+bind_value_row(K,[H|T],R,C,V,I,Rc,Cc,Acc) when 
 		(((R - (R-1) rem K) == (Rc - (Rc - 1) rem K)) andalso 
 		((C - (C-1) rem K) == (Cc -(Cc-1) rem K))) -> 
-	bind_value_row(K,T,{R,C,V,I},Rc,Cc+1,[delete_guess(V,H)|Acc]);
-bind_value_row(K,[H|T],{R,C,V,I},Rc,Cc,Acc) -> 
-	bind_value_row(K,T,{R,C,V,I},Rc,Cc+1,[H|Acc]).
+	bind_value_row(K,T,R,C,V,I,Rc,Cc+1,[delete_guess(V,H)|Acc]);
+bind_value_row(K,[H|T],R,C,V,I,Rc,Cc,Acc) -> 
+	bind_value_row(K,T,R,C,V,I,Rc,Cc+1,[H|Acc]).
 
 %% @spec sudoku:delete_guess(V::integer(), L::possib()) -> L1::possib().
 %% L1 egy olyan lehetseges mezoerteket leiro objektum, melynek minden

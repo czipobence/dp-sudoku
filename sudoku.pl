@@ -6,11 +6,13 @@
 
 % :- type ssol == list(list(int)).
 
+
+:- use_module(library(lists)).
+
 % sudoku(SSpec, SSol):
 % SSol az SSpec feladvanyt kielegito megoldas.
 % :- pred sudoku(sspec::in, ssol::out).
 sudoku(s(K,Bo),Sol) :-
-	use_module(library(lists)),
 	preprocess(Bo,BoPP),
 	allowed(K,BoPP,1,All),
 	solve(K,All,BoPP,Sol).
