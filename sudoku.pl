@@ -165,6 +165,27 @@ preprocess_row([PreI|PreT], [CurrI,NextI|CurrT], Acc, PP) :-
 	preprocess_row(PreT, [NextI|CurrT], [CurrI2|Acc],PP).
 		
 
+shortest_list(Mx,SL) :-
+	shortest_list(Mx,1,(0,0,0,[]),SL).
+
+shortest_list([],_,Cnt,Cnt).
+shortest_list([H|T],R,Cnt,SL) :-
+	R1 is R +1,
+	shortest_list_row(H,R,1,Cnt,Cnt1),
+	shortest_list(T,R1,Cnt1,SL).
+
+shortest_list_row([],_,_,Cnt,Cnt).
+shortest_list_row([H|T],R,C,Cnt,SL) :-
+	C1 is C + 1,
+	(	H = [_|_] ->
+			(Min,_,_,_) = Cnt,
+			length(H,L1),
+			(	(Min = 0; L1 < Min) ->
+					shortest_list_row(T,R,C1,(L1,R,C,H),SL)
+			;	shortest_list_row(T,R,C1,Cnt,SL)
+			)		
+	;	shortest_list_row(T,R,C1,Cnt,SL)	
+	).
 
 % :- type col  == int.
 % :- type row  == int.
