@@ -10,10 +10,20 @@
 % SSol az SSpec feladványt kielégítő megoldás.
 % :- pred sudoku(sspec::in, ssol::out).
 sudoku(s(K,Bo),Sol) :-
+	use_module(library(lists)),
 	preprocess(Bo,BoPP),
 	allowed(K,BoPP,1,All),
-	process_singles(K,All,BoPP,Sol1),
-	split_by(K,Sol1,BoPP,3,3,[1,4],[],Sol).
+	solve(K,All,BoPP,Sol).
+
+solve(K,V,Bo,Sol) :-
+	process_singles(K,V,Bo,Pr),
+	shortest_list(Pr,SL),
+	(	SL = (0,0,0,_) -> Sol = Pr
+	;	SL = (_,R,C,N),
+		mx_item(Bo,R,C,Inf),
+		split_by(K,Pr,Bo,R,C,N,Inf,Sp),
+		solve(K,Sp,Bo,Sol)
+	).
 
 split_by(K,V,_,R,C,[H|_],Inf,MO) :-
 	set_value(K,V,(R,C,H,Inf),MO).
@@ -313,7 +323,7 @@ bet(From,To,N) :-
 %% ami a StartC oszloptól Width oszlop szélesen,
 %% és a StartR sortól Height sor hosszan tart 
 submatrix(Mx, StartR, StartC, Height, Width, Smx) :-
-	sublist(Mx, StartR, Height, Lt),
+	m_sublist(Mx, StartR, Height, Lt),
 	cutAll(Lt, StartC, Width, Smx).
 
 % cutAll(Mx, StartR, Height, M): M mátrix Mx olyan részmátrixa, mely 
@@ -321,12 +331,12 @@ submatrix(Mx, StartR, StartC, Height, Width, Smx) :-
 cutAll([], _, _, []).
 cutAll([H|T], StartR, Height, [HSmx|TSmx]) :-
 	isList(H),
-	sublist(H,StartR,Height, HSmx),
+	m_sublist(H,StartR,Height, HSmx),
 	cutAll(T, StartR, Height, TSmx).
 
-% sublist(L, S, N, L1): Az L1 lista az L lista N hosszúságú részlistája
+% m_sublist(L, S, N, L1): Az L1 lista az L lista N hosszúságú részlistája
 % az S. elemmel kezdve
-sublist(L, S, N, L1) :-
+m_sublist(L, S, N, L1) :-
 	S1 is S -1,
 	drop(L,S1,Ltemp),
 	take(Ltemp,N,L1).
